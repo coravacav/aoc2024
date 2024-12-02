@@ -1,5 +1,3 @@
-use std::collections::BinaryHeap;
-
 use ahash::AHashMap;
 
 use crate::Solution;
@@ -12,16 +10,18 @@ impl Solution for Day1 {
     }
 
     fn part1(&mut self, input: &str) -> String {
-        let (left, right) = input
+        let (mut left, mut right) = input
             .lines()
             .flat_map(|line| line.split_once("   "))
             .map(|(l, r)| (l.parse::<u32>().unwrap(), r.parse::<u32>().unwrap()))
-            .unzip::<_, _, BinaryHeap<_>, BinaryHeap<_>>();
+            .unzip::<_, _, Vec<_>, Vec<_>>();
 
-        left.into_sorted_vec()
-            .iter()
+        left.sort();
+        right.sort();
+
+        left.iter()
             .copied()
-            .zip(right.into_sorted_vec().iter().copied())
+            .zip(right.iter().copied())
             .map(|(l, r)| l.abs_diff(r))
             .sum::<u32>()
             .to_string()
