@@ -5,6 +5,7 @@ use std::{
 
 use ahash::AHashMap;
 use divan::Bencher;
+use itertools::Itertools;
 use rand::Rng;
 
 fn main() {
@@ -20,7 +21,7 @@ enum SortImplementationText {
 
 #[divan::bench(args = [SortImplementationText::Vec, SortImplementationText::BinaryHeap, SortImplementationText::BTreeSet])]
 fn sort_bench(bencher: Bencher, implementation: SortImplementationText) {
-    let random_numbers: Vec<u32> = (0..1000000)
+    let random_numbers: Vec<u32> = (0..10000)
         .map(|_| rand::thread_rng().gen_range(0..100))
         .collect();
 
@@ -208,6 +209,200 @@ fn day1_part2_bench_non_build(bencher: Bencher, implementation: Day1Part2Impleme
             left.iter()
                 .map(|i| i * right.iter().filter(|x| *x == i).count() as u32)
                 .sum::<u32>()
+                .to_string()
+        },
+    };
+
+    bencher.bench_local(move || {
+        black_box(implementation());
+    });
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Day2Implementation {
+    Brute,
+    Smartish,
+}
+
+fn brute_check(line: &[i32]) -> u32 {
+    // if all pos
+    if line.iter().all(|a| a.is_positive()) {
+        return line.iter().all(|&a| a == 1 || a == 2 || a == 3).into();
+    }
+
+    if line.iter().all(|a| a.is_negative()) {
+        return line.iter().all(|&a| a == -1 || a == -2 || a == -3).into();
+    }
+
+    0
+}
+
+fn smartish_check<const SKIP_ONE: bool>(l: Vec<u8>) -> bool {
+    let mut is_asc = false;
+    let mut is_desc = false;
+
+    let mut indexes_to_skip: Option<[usize; 3]> = None;
+
+    for (idx, (a, b)) in l.iter().tuple_windows().enumerate() {
+        if a < b && !is_desc {
+            is_asc = true;
+            match b - a {
+                1..=3 => {}
+                _ => {
+                    if SKIP_ONE {
+                        indexes_to_skip = Some([idx.saturating_sub(1), idx, idx + 1]);
+                        break;
+                    }
+
+                    return false;
+                }
+            }
+        } else if a > b && !is_asc {
+            is_desc = true;
+            match a - b {
+                1..=3 => {}
+                _ => {
+                    if SKIP_ONE {
+                        indexes_to_skip = Some([idx.saturating_sub(1), idx, idx + 1]);
+                        break;
+                    }
+
+                    return false;
+                }
+            }
+        } else {
+            if SKIP_ONE {
+                indexes_to_skip = Some([idx.saturating_sub(1), idx, idx + 1]);
+                break;
+            }
+
+            return false;
+        }
+    }
+
+    if let Some(indexes_to_skip) = indexes_to_skip {
+        for idx in indexes_to_skip {
+            let mut n = l.clone();
+            if n.get(idx).is_none() {
+                continue;
+            }
+
+            n.remove(idx);
+            if smartish_check::<false>(n) {
+                return true;
+            }
+        }
+
+        false
+    } else {
+        true
+    }
+}
+
+#[divan::bench(args = [Day2Implementation::Brute, Day2Implementation::Smartish])]
+fn day2_part1_bench(bencher: Bencher, implementation: Day2Implementation) {
+    let input = black_box(include_str!("../inputs/2_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day2Implementation::Brute => &mut || {
+            input
+                .lines()
+                .map(|line| {
+                    let line = line
+                        .split(" ")
+                        .map(|s| s.parse::<i32>().unwrap())
+                        .tuple_windows()
+                        .map(|(a, b)| a - b)
+                        .collect_vec();
+
+                    brute_check(&line)
+                })
+                .sum::<u32>()
+                .to_string()
+        },
+        Day2Implementation::Smartish => &mut || {
+            input
+                .lines()
+                .map(|line| -> u16 {
+                    smartish_check::<false>(
+                        line.split(" ")
+                            .map(|s| s.parse::<u8>().unwrap())
+                            .collect_vec(),
+                    )
+                    .into()
+                })
+                .sum::<u16>()
+                .to_string()
+        },
+    };
+
+    bencher.bench_local(move || {
+        black_box(implementation());
+    });
+}
+
+#[divan::bench(args = [Day2Implementation::Brute, Day2Implementation::Smartish])]
+fn day2_part2_bench(bencher: Bencher, implementation: Day2Implementation) {
+    let input = black_box(include_str!("../inputs/2_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day2Implementation::Brute => &mut || {
+            input
+                .lines()
+                .map(|line| {
+                    let line = line
+                        .split(" ")
+                        .map(|s| s.parse::<i32>().unwrap())
+                        .collect_vec();
+
+                    if brute_check(
+                        &line
+                            .iter()
+                            .tuple_windows()
+                            .map(|(a, b)| a - b)
+                            .collect_vec(),
+                    ) == 1
+                    {
+                        return 1;
+                    }
+
+                    // try dropping one of the numbers each
+                    for i in 0..line.len() {
+                        let mut new_line = line.clone();
+                        new_line.remove(i);
+                        if brute_check(
+                            &new_line
+                                .iter()
+                                .tuple_windows()
+                                .map(|(a, b)| a - b)
+                                .collect_vec(),
+                        ) == 1
+                        {
+                            return 1;
+                        }
+                    }
+
+                    if brute_check(&line) == 1 {
+                        return 1;
+                    }
+
+                    0
+                })
+                .sum::<u32>()
+                .to_string()
+        },
+        Day2Implementation::Smartish => &mut || {
+            input
+                .lines()
+                .map(|line| -> u16 {
+                    smartish_check::<true>(
+                        line.split(" ")
+                            .map(|s| s.parse::<u8>().unwrap())
+                            .collect_vec(),
+                    )
+                    .into()
+                })
+                .sum::<u16>()
                 .to_string()
         },
     };

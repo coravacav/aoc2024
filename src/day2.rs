@@ -4,17 +4,66 @@ use crate::Solution;
 
 pub struct Day2 {}
 
-fn check(line: &[i32]) -> u32 {
-    // if all pos
-    if line.iter().all(|a| a.is_positive()) {
-        return line.iter().all(|&a| a == 1 || a == 2 || a == 3).into();
+fn check<const SKIP_ONE: bool>(l: Vec<u16>) -> bool {
+    let mut is_asc = false;
+    let mut is_desc = false;
+
+    let mut indexes_to_skip: Option<[usize; 3]> = None;
+
+    for (idx, (a, b)) in l.iter().tuple_windows().enumerate() {
+        if a < b && !is_desc {
+            is_asc = true;
+            match b - a {
+                1..=3 => {}
+                _ => {
+                    if SKIP_ONE {
+                        indexes_to_skip = Some([idx.saturating_sub(1), idx, idx + 1]);
+                        break;
+                    }
+
+                    return false;
+                }
+            }
+        } else if a > b && !is_asc {
+            is_desc = true;
+            match a - b {
+                1..=3 => {}
+                _ => {
+                    if SKIP_ONE {
+                        indexes_to_skip = Some([idx.saturating_sub(1), idx, idx + 1]);
+                        break;
+                    }
+
+                    return false;
+                }
+            }
+        } else {
+            if SKIP_ONE {
+                indexes_to_skip = Some([idx.saturating_sub(1), idx, idx + 1]);
+                break;
+            }
+
+            return false;
+        }
     }
 
-    if line.iter().all(|a| a.is_negative()) {
-        return line.iter().all(|&a| a == -1 || a == -2 || a == -3).into();
-    }
+    if let Some(indexes_to_skip) = indexes_to_skip {
+        for idx in indexes_to_skip {
+            let mut n = l.clone();
+            if n.get(idx).is_none() {
+                continue;
+            }
 
-    0
+            n.remove(idx);
+            if check::<false>(n) {
+                return true;
+            }
+        }
+
+        false
+    } else {
+        true
+    }
 }
 
 impl Solution for Day2 {
@@ -25,72 +74,39 @@ impl Solution for Day2 {
     fn part1(&mut self, input: &str) -> String {
         input
             .lines()
-            .map(|line| {
-                let line = line
-                    .split(" ")
-                    .map(|s| s.parse::<i32>().unwrap())
-                    .tuple_windows()
-                    .map(|(a, b)| a - b)
-                    .collect_vec();
-
-                check(&line)
+            .map(|line| -> u16 {
+                check::<false>(
+                    line.split(" ")
+                        .map(|s| s.parse::<u16>().unwrap())
+                        .collect_vec(),
+                )
+                .into()
             })
-            .sum::<u32>()
+            .sum::<u16>()
             .to_string()
     }
 
     fn known_solution_part1(&self) -> Option<String> {
-        None
+        Some("202".to_string())
     }
 
     fn part2(&mut self, input: &str) -> String {
         input
             .lines()
-            .map(|line| {
-                let line = line
-                    .split(" ")
-                    .map(|s| s.parse::<i32>().unwrap())
-                    .collect_vec();
-
-                if check(
-                    &line
-                        .iter()
-                        .tuple_windows()
-                        .map(|(a, b)| a - b)
+            .map(|line| -> u16 {
+                check::<true>(
+                    line.split(" ")
+                        .map(|s| s.parse::<u16>().unwrap())
                         .collect_vec(),
-                ) == 1
-                {
-                    return 1;
-                }
-
-                // try dropping one of the numbers each
-                for i in 0..line.len() {
-                    let mut new_line = line.clone();
-                    new_line.remove(i);
-                    if check(
-                        &new_line
-                            .iter()
-                            .tuple_windows()
-                            .map(|(a, b)| a - b)
-                            .collect_vec(),
-                    ) == 1
-                    {
-                        return 1;
-                    }
-                }
-
-                if check(&line) == 1 {
-                    return 1;
-                }
-
-                0
+                )
+                .into()
             })
-            .sum::<u32>()
+            .sum::<u16>()
             .to_string()
     }
 
     fn known_solution_part2(&self) -> Option<String> {
-        None
+        Some("271".to_string())
     }
 }
 
