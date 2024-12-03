@@ -32,7 +32,7 @@ mod day2;
 // mod day23;
 // mod day24;
 // mod day25;
-// mod day3;
+mod day3;
 // mod day4;
 // mod day5;
 // mod day6;
@@ -44,7 +44,7 @@ pub fn get_solution(day: u8) -> Box<dyn Solution> {
     match day {
         1 => Box::new(day1::Day1::new()),
         2 => Box::new(day2::Day2::new()),
-        // 3 => day3::Day3::new(),
+        3 => Box::new(day3::Day3::new()),
         // 4 => day4::Day4::new(),
         // 5 => day5::Day5::new(),
         // 6 => day6::Day6::new(),
