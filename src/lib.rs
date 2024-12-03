@@ -15,30 +15,30 @@ pub trait Solution {
 }
 
 pub mod day1;
-// mod day10;
-// mod day11;
-// mod day12;
-// mod day13;
-// mod day14;
-// mod day15;
-// mod day16;
-// mod day17;
-// mod day18;
-// mod day19;
-mod day2;
-// mod day20;
-// mod day21;
-// mod day22;
-// mod day23;
-// mod day24;
-// mod day25;
-mod day3;
-// mod day4;
-// mod day5;
-// mod day6;
-// mod day7;
-// mod day8;
-// mod day9;
+pub mod day2;
+pub mod day3;
+// pub mod day10;
+// pub mod day11;
+// pub mod day12;
+// pub mod day13;
+// pub mod day14;
+// pub mod day15;
+// pub mod day16;
+// pub mod day17;
+// pub mod day18;
+// pub mod day19;
+// pub mod day20;
+// pub mod day21;
+// pub mod day22;
+// pub mod day23;
+// pub mod day24;
+// pub mod day25;
+// pub mod day4;
+// pub mod day5;
+// pub mod day6;
+// pub mod day7;
+// pub mod day8;
+// pub mod day9;
 
 pub fn get_solution(day: u8) -> Box<dyn Solution> {
     match day {

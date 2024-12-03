@@ -22,7 +22,7 @@ impl Solution for Day3 {
     }
 
     fn known_solution_part1(&self) -> Option<String> {
-        None
+        Some(188116424.to_string())
     }
 
     fn part2(&mut self, input: &str) -> String {
@@ -51,7 +51,7 @@ impl Solution for Day3 {
     }
 
     fn known_solution_part2(&self) -> Option<String> {
-        None
+        Some(104245808.to_string())
     }
 }
 

@@ -5,9 +5,11 @@ use std::{
 };
 
 use ahash::AHashMap;
+use aoc2024::{day3::Day3, Solution};
 use divan::Bencher;
 use itertools::Itertools;
 use rand::Rng;
+use regex::Regex;
 
 fn main() {
     divan::main();
@@ -572,5 +574,112 @@ fn day2_part2_bench(bencher: Bencher, implementation: Day2Implementation) {
 
     bencher.bench_local(move || {
         black_box(implementation());
+    });
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Day3Implementation {
+    First,
+    Chase,
+}
+
+#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase])]
+fn day3_part1_bench(bencher: Bencher, implementation: Day3Implementation) {
+    let input = black_box(include_str!("../inputs/3_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day3Implementation::First => &mut || {
+            let sol = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
+            sol.captures_iter(input)
+                .map(|capture| {
+                    let a = capture[1].parse::<u32>().unwrap();
+                    let b = capture[2].parse::<u32>().unwrap();
+                    a * b
+                })
+                .sum::<u32>()
+                .to_string()
+        },
+        Day3Implementation::Chase => &mut || {
+            let re = Regex::new(r"mul\((\d+),(\d+)\)").unwrap();
+
+            re.captures_iter(input)
+                .map(|captures| {
+                    let (_, [a, b]) = captures.extract();
+                    a.parse::<usize>().unwrap() * b.parse::<usize>().unwrap()
+                })
+                .sum::<usize>()
+                .to_string()
+        },
+    };
+
+    bencher.bench_local(move || {
+        black_box(implementation());
+    });
+}
+
+#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase])]
+fn day3_part2_bench(bencher: Bencher, implementation: Day3Implementation) {
+    let input = black_box(include_str!("../inputs/3_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day3Implementation::First => &mut || {
+            let sol = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
+
+            let mut new_input = String::new();
+
+            if let Some((a, _)) = input.split_once("don't()") {
+                new_input.push_str(a);
+            }
+
+            for dontsection in input.split("don't()").skip(1) {
+                for dosection in dontsection.split("do()").skip(1) {
+                    new_input.push_str(dosection);
+                }
+            }
+
+            sol.captures_iter(&new_input)
+                .map(|capture| {
+                    let a = capture[1].parse::<u32>().unwrap();
+                    let b = capture[2].parse::<u32>().unwrap();
+                    a * b
+                })
+                .sum::<u32>()
+                .to_string()
+        },
+        Day3Implementation::Chase => &mut || {
+            let re = Regex::new(r"(mul|do|don't)\((?:(\d{1,3}),(\d{1,3}))?\)").unwrap();
+
+            re.captures_iter(input)
+                .scan(true, |toggle, captures| {
+                    Some(match &captures[1] {
+                        "mul" if *toggle => match (captures.get(2), captures.get(3)) {
+                            (Some(a), Some(b)) => Some(
+                                a.as_str().parse::<u32>().unwrap()
+                                    * b.as_str().parse::<u32>().unwrap(),
+                            ),
+                            _ => None,
+                        },
+                        "do" => {
+                            *toggle = true;
+                            None
+                        }
+                        "don't" => {
+                            *toggle = false;
+                            None
+                        }
+                        _ => None,
+                    })
+                })
+                .flatten()
+                .sum::<u32>()
+                .to_string()
+        },
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day3::new().known_solution_part2().unwrap()
+        );
     });
 }
