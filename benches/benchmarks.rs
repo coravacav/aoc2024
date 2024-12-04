@@ -591,9 +591,10 @@ enum Day3Implementation {
     First,
     Chase,
     OrigamiDuck,
+    Alpha,
 }
 
-#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase, Day3Implementation::OrigamiDuck])]
+#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase, Day3Implementation::OrigamiDuck, Day3Implementation::Alpha])]
 fn day3_part1_bench(bencher: Bencher, implementation: Day3Implementation) {
     let input = black_box(include_str!("../inputs/3_input.txt"));
 
@@ -661,6 +662,47 @@ fn day3_part1_bench(bencher: Bencher, implementation: Day3Implementation) {
 
             part1(input).unwrap().to_string()
         },
+
+        Day3Implementation::Alpha => &mut || {
+            use anyhow::Result;
+            use nom::character::complete::{char, u64 as parse_u64};
+            use nom::sequence::tuple;
+            use nom::{Err as NomErr, IResult};
+
+            macro_rules! parse_mul {
+                ($input:expr, &mut $sum:ident) => {
+                    match parse_mul($input) {
+                        Err(NomErr::Incomplete(_)) => break,
+                        Err(NomErr::Error(error) | NomErr::Failure(error)) => error.input,
+                        Ok((rest, (lhs, rhs))) => {
+                            $sum += lhs * rhs;
+                            rest
+                        }
+                    }
+                };
+            }
+
+            pub fn part_one(mut input: &str) -> Result<u64> {
+                let mut sum = 0;
+
+                while let Some(rest) = find_and_skip(input, "mul(") {
+                    input = parse_mul!(rest, &mut sum);
+                }
+
+                Ok(sum)
+            }
+
+            fn find_and_skip<'a>(input: &'a str, pat: &str) -> Option<&'a str> {
+                input.find(pat).map(|idx| &input[idx + pat.len()..])
+            }
+
+            fn parse_mul(input: &str) -> IResult<&str, (u64, u64)> {
+                tuple((parse_u64, char(','), parse_u64, char(')')))(input)
+                    .map(|(rest, (lhs, _, rhs, _))| (rest, (lhs, rhs)))
+            }
+
+            part_one(input).unwrap().to_string()
+        },
     };
 
     bencher.bench_local(move || {
@@ -671,7 +713,7 @@ fn day3_part1_bench(bencher: Bencher, implementation: Day3Implementation) {
     });
 }
 
-#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase, Day3Implementation::OrigamiDuck])]
+#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase, Day3Implementation::OrigamiDuck, Day3Implementation::Alpha])]
 fn day3_part2_bench(bencher: Bencher, implementation: Day3Implementation) {
     let input = black_box(include_str!("../inputs/3_input.txt"));
 
@@ -792,6 +834,73 @@ fn day3_part2_bench(bencher: Bencher, implementation: Day3Implementation) {
             }
 
             part2(input).unwrap().to_string()
+        },
+        Day3Implementation::Alpha => &mut || {
+            use anyhow::Result;
+            use nom::character::complete::{char, u64 as parse_u64};
+            use nom::sequence::tuple;
+            use nom::{Err as NomErr, IResult};
+
+            macro_rules! parse_mul {
+                ($input:expr, &mut $sum:ident) => {
+                    match parse_mul($input) {
+                        Err(NomErr::Incomplete(_)) => break,
+                        Err(NomErr::Error(error) | NomErr::Failure(error)) => error.input,
+                        Ok((rest, (lhs, rhs))) => {
+                            $sum += lhs * rhs;
+                            rest
+                        }
+                    }
+                };
+            }
+
+            pub fn part_two(mut input: &str) -> Result<u64> {
+                let mut sum = 0;
+
+                while let Some((rest, mul_or_dont)) = find_mul_or_dont(input) {
+                    input = match mul_or_dont {
+                        MulOrDont::Mul => parse_mul!(rest, &mut sum),
+                        MulOrDont::Dont => match find_and_skip(rest, "do()") {
+                            None => break,
+                            Some(rest) => rest,
+                        },
+                    };
+                }
+
+                Ok(sum)
+            }
+
+            #[derive(Debug)]
+            enum MulOrDont {
+                Mul,
+                Dont,
+            }
+
+            fn find_and_skip<'a>(input: &'a str, pat: &str) -> Option<&'a str> {
+                input.find(pat).map(|idx| &input[idx + pat.len()..])
+            }
+
+            fn find_mul_or_dont(input: &str) -> Option<(&str, MulOrDont)> {
+                input
+                    .bytes()
+                    .enumerate()
+                    .find_map(|(idx, byte)| match byte {
+                        b'm' => input[idx + 1..]
+                            .strip_prefix("ul(")
+                            .map(|rest| (rest, MulOrDont::Mul)),
+                        b'd' => input[idx + 1..]
+                            .strip_prefix("on't()")
+                            .map(|rest| (rest, MulOrDont::Dont)),
+                        _ => None,
+                    })
+            }
+
+            fn parse_mul(input: &str) -> IResult<&str, (u64, u64)> {
+                tuple((parse_u64, char(','), parse_u64, char(')')))(input)
+                    .map(|(rest, (lhs, _, rhs, _))| (rest, (lhs, rhs)))
+            }
+
+            part_two(input).unwrap().to_string()
         },
     };
 
