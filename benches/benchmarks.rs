@@ -5,9 +5,18 @@ use std::{
 };
 
 use ahash::AHashMap;
-use aoc2024::{day3::Day3, Solution};
+use aoc2024::{Solution, day3::Day3};
 use divan::Bencher;
 use itertools::Itertools;
+use nom::{
+    IResult,
+    branch::alt,
+    bytes::complete::{tag, take_until, take_while1},
+    character::complete::char,
+    combinator::{map, opt, rest},
+    multi::fold_many1,
+    sequence::{preceded, terminated, tuple},
+};
 use rand::Rng;
 use regex::Regex;
 
@@ -581,9 +590,10 @@ fn day2_part2_bench(bencher: Bencher, implementation: Day2Implementation) {
 enum Day3Implementation {
     First,
     Chase,
+    OrigamiDuck,
 }
 
-#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase])]
+#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase, Day3Implementation::OrigamiDuck])]
 fn day3_part1_bench(bencher: Bencher, implementation: Day3Implementation) {
     let input = black_box(include_str!("../inputs/3_input.txt"));
 
@@ -610,14 +620,58 @@ fn day3_part1_bench(bencher: Bencher, implementation: Day3Implementation) {
                 .sum::<usize>()
                 .to_string()
         },
+        Day3Implementation::OrigamiDuck => &mut || {
+            fn valid_body(input: &str) -> IResult<&str, (usize, usize)> {
+                map(
+                    tuple((
+                        nom::character::complete::u32,
+                        char(','),
+                        nom::character::complete::u32,
+                        char(')'),
+                    )),
+                    |(a, _, b, _)| (a as usize, b as usize),
+                )(input)
+            }
+
+            fn instruction(input: &str) -> IResult<&str, Option<(usize, usize)>> {
+                preceded(
+                    tuple((
+                        take_until("mul("),
+                        tag::<&str, &str, nom::error::Error<&str>>("mul("),
+                    )),
+                    opt(valid_body),
+                )(input)
+            }
+
+            fn part1(input: &str) -> anyhow::Result<usize> {
+                Ok(fold_many1(
+                    instruction,
+                    || 0,
+                    |acc, instr| {
+                        if let Some((a, b)) = instr {
+                            acc + a * b
+                        } else {
+                            acc
+                        }
+                    },
+                )(input)
+                .expect("at least one instruction")
+                .1)
+            }
+
+            part1(input).unwrap().to_string()
+        },
     };
 
     bencher.bench_local(move || {
-        black_box(implementation());
+        assert_eq!(
+            black_box(implementation()),
+            Day3::new().known_solution_part1().unwrap()
+        );
     });
 }
 
-#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase])]
+#[divan::bench(args = [Day3Implementation::First, Day3Implementation::Chase, Day3Implementation::OrigamiDuck])]
 fn day3_part2_bench(bencher: Bencher, implementation: Day3Implementation) {
     let input = black_box(include_str!("../inputs/3_input.txt"));
 
@@ -673,6 +727,71 @@ fn day3_part2_bench(bencher: Bencher, implementation: Day3Implementation) {
                 .flatten()
                 .sum::<u32>()
                 .to_string()
+        },
+        Day3Implementation::OrigamiDuck => &mut || {
+            fn valid_body(input: &str) -> IResult<&str, (usize, usize)> {
+                map(
+                    tuple((
+                        nom::character::complete::u32,
+                        char(','),
+                        nom::character::complete::u32,
+                        char(')'),
+                    )),
+                    |(a, _, b, _)| (a as usize, b as usize),
+                )(input)
+            }
+
+            fn instruction(input: &str) -> IResult<&str, Option<(usize, usize)>> {
+                preceded(
+                    tuple((
+                        take_until("mul("),
+                        tag::<&str, &str, nom::error::Error<&str>>("mul("),
+                    )),
+                    opt(valid_body),
+                )(input)
+            }
+
+            fn part1(input: &str) -> anyhow::Result<usize> {
+                Ok(fold_many1(
+                    instruction,
+                    || 0,
+                    |acc, instr| {
+                        if let Some((a, b)) = instr {
+                            acc + a * b
+                        } else {
+                            acc
+                        }
+                    },
+                )(input)
+                .expect("at least one instruction")
+                .1)
+            }
+
+            fn enabled_segment(input: &str) -> IResult<&str, &str> {
+                alt((
+                    terminated(
+                        take_until("don't()"),
+                        opt(tuple((
+                            tag("don't()"),
+                            alt((terminated(take_until("do()"), tag("do()")), rest)),
+                        ))),
+                    ),
+                    // Require at least one character so we don't match empty string
+                    take_while1(|_| true),
+                ))(input)
+            }
+
+            fn part2(input: &str) -> anyhow::Result<usize> {
+                Ok(fold_many1(
+                    map(enabled_segment, part1),
+                    || 0,
+                    |acc, segment_sum| acc + segment_sum.expect("can parse segment"),
+                )(input)
+                .expect("at least one segment")
+                .1)
+            }
+
+            part2(input).unwrap().to_string()
         },
     };
 
