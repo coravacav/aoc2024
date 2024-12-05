@@ -1,13 +1,14 @@
 use std::{
     collections::{BTreeSet, BinaryHeap, HashMap},
     hint::black_box,
-    iter::once,
+    iter::{once, repeat_n},
 };
 
 use ahash::AHashMap;
-use aoc2024::{Solution, day3::Day3};
+use anyhow::Result;
+use aoc2024::{Solution, day3::Day3, day4::Day4};
 use divan::Bencher;
-use itertools::Itertools;
+use itertools::{Itertools, izip};
 use nom::{
     IResult,
     branch::alt,
@@ -908,6 +909,284 @@ fn day3_part2_bench(bencher: Bencher, implementation: Day3Implementation) {
         assert_eq!(
             black_box(implementation()),
             Day3::new().known_solution_part2().unwrap()
+        );
+    });
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Day4Implementation {
+    Mine,
+    Alpha,
+    OrigamiDuck,
+}
+
+#[divan::bench(args = [Day4Implementation::Mine, Day4Implementation::Alpha, Day4Implementation::OrigamiDuck])]
+fn day4_part1_bench(bencher: Bencher, implementation: Day4Implementation) {
+    let input = black_box(include_str!("../inputs/4_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day4Implementation::Mine => &mut || Day4::new().part1(input),
+        Day4Implementation::Alpha => &mut || {
+            pub fn part_one(input: &str) -> Result<usize> {
+                const OFFSETS: &[(isize, isize)] = &[
+                    (-1, 0),
+                    (0, 1),
+                    (1, 0),
+                    (0, -1),
+                    (-1, -1),
+                    (1, 1),
+                    (1, -1),
+                    (-1, 1),
+                ];
+
+                let grid = Grid::new(input.as_ref());
+
+                Ok(grid
+                    .coordinates()
+                    .filter(|&(row, col)| grid.get(row, col) == Some(b'X'))
+                    .map(|(row, col)| {
+                        OFFSETS
+                            .iter()
+                            .filter(|&&(row_offset, col_offset)| {
+                                grid.probe_xmas(row, row_offset, col, col_offset)
+                            })
+                            .count()
+                    })
+                    .sum())
+            }
+
+            #[derive(Debug)]
+            struct Grid<'a> {
+                bytes: &'a [u8],
+                columns: usize,
+            }
+
+            impl<'a> Grid<'a> {
+                fn new(bytes: &'a [u8]) -> Self {
+                    Self {
+                        bytes,
+                        columns: bytes
+                            .iter()
+                            .position(|&byte| byte == b'\n')
+                            .unwrap_or(bytes.len()),
+                    }
+                }
+
+                fn coordinates(&self) -> impl Iterator<Item = (usize, usize)> {
+                    itertools::iproduct!(0..self.rows(), 0..self.columns)
+                }
+
+                fn rows(&self) -> usize {
+                    self.bytes.len() / self.columns
+                }
+
+                fn get(&self, row: usize, col: usize) -> Option<u8> {
+                    self.bytes.get((row * (self.columns + 1)) + col).copied()
+                }
+
+                fn probe_xmas(
+                    &self,
+                    row: usize,
+                    row_offset: isize,
+                    col: usize,
+                    col_offset: isize,
+                ) -> bool {
+                    fn probe_char(
+                        grid: &Grid<'_>,
+                        row: usize,
+                        row_offset: isize,
+                        col: usize,
+                        col_offset: isize,
+                        ch: u8,
+                    ) -> Option<(usize, usize)> {
+                        Option::zip(
+                            grid.checked_row(row, row_offset),
+                            grid.checked_col(col, col_offset),
+                        )
+                        .filter(|&(row, col)| grid.get(row, col) == Some(ch))
+                    }
+
+                    probe_char(self, row, row_offset, col, col_offset, b'M')
+                        .and_then(|(row, col)| {
+                            probe_char(self, row, row_offset, col, col_offset, b'A')
+                        })
+                        .and_then(|(row, col)| {
+                            probe_char(self, row, row_offset, col, col_offset, b'S')
+                        })
+                        .is_some()
+                }
+
+                fn checked_row(&self, row: usize, offset: isize) -> Option<usize> {
+                    row.checked_add_signed(offset)
+                        .filter(|&row| row < self.rows())
+                }
+
+                fn checked_col(&self, col: usize, offset: isize) -> Option<usize> {
+                    col.checked_add_signed(offset)
+                        .filter(|&col| col < self.columns)
+                }
+            }
+
+            part_one(input).unwrap().to_string()
+        },
+        Day4Implementation::OrigamiDuck => &mut || {
+            macro_rules! matches_xmas {
+                ($input: expr) => {
+                    matches!($input, ('X', 'M', 'A', 'S') | ('S', 'A', 'M', 'X'))
+                };
+            }
+            let line_length = input.find("\n").expect("at least one line");
+            type Column = (char, char, char, char);
+            input
+                .lines()
+                .chain(repeat_n(".".repeat(line_length).as_str(), 3))
+                .tuple_windows()
+                .fold(0, |acc: usize, lines: (&str, &str, &str, &str)| {
+                    acc + izip!(
+                        lines.0.chars().chain(repeat_n('.', 3)),
+                        lines.1.chars().chain(repeat_n('.', 3)),
+                        lines.2.chars().chain(repeat_n('.', 3)),
+                        lines.3.chars().chain(repeat_n('.', 3)),
+                    )
+                    .tuple_windows::<(Column, Column, Column, Column)>()
+                    .map(|columns| {
+                        let horizontal =
+                            matches_xmas!((columns.0.0, columns.1.0, columns.2.0, columns.3.0));
+                        let vertical = matches_xmas!(columns.0);
+                        let right_diagonal =
+                            matches_xmas!((columns.0.0, columns.1.1, columns.2.2, columns.3.3));
+                        let left_diagonal =
+                            matches_xmas!((columns.3.0, columns.2.1, columns.1.2, columns.0.3));
+                        horizontal as usize
+                            + vertical as usize
+                            + right_diagonal as usize
+                            + left_diagonal as usize
+                    })
+                    .sum::<usize>()
+                })
+                .to_string()
+        },
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day4::new().known_solution_part1().unwrap()
+        );
+    });
+}
+
+#[divan::bench(args = [Day4Implementation::Mine, Day4Implementation::Alpha, Day4Implementation::OrigamiDuck])]
+fn day4_part2_bench(bencher: Bencher, implementation: Day4Implementation) {
+    let input = black_box(include_str!("../inputs/4_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day4Implementation::Mine => &mut || Day4::new().part2(input),
+        Day4Implementation::Alpha => &mut || {
+            pub fn part_two(input: &str) -> Result<usize> {
+                let grid = Grid::new(input.as_ref());
+
+                Ok(grid
+                    .coordinates()
+                    .filter(|&(row, col)| grid.get(row, col) == Some(b'A'))
+                    .filter(|&(row, col)| {
+                        grid.probe_m_s(row, -1, col, 1) && grid.probe_m_s(row, 1, col, 1)
+                    })
+                    .count())
+            }
+
+            #[derive(Debug)]
+            struct Grid<'a> {
+                bytes: &'a [u8],
+                columns: usize,
+            }
+
+            impl<'a> Grid<'a> {
+                fn new(bytes: &'a [u8]) -> Self {
+                    Self {
+                        bytes,
+                        columns: bytes
+                            .iter()
+                            .position(|&byte| byte == b'\n')
+                            .unwrap_or(bytes.len()),
+                    }
+                }
+
+                fn coordinates(&self) -> impl Iterator<Item = (usize, usize)> {
+                    itertools::iproduct!(0..self.rows(), 0..self.columns)
+                }
+
+                fn rows(&self) -> usize {
+                    self.bytes.len() / self.columns
+                }
+
+                fn get(&self, row: usize, col: usize) -> Option<u8> {
+                    self.bytes.get((row * (self.columns + 1)) + col).copied()
+                }
+
+                fn probe_m_s(
+                    &self,
+                    row: usize,
+                    row_offset: isize,
+                    col: usize,
+                    col_offset: isize,
+                ) -> bool {
+                    Option::zip(
+                        Option::zip(
+                            self.checked_row(row, row_offset),
+                            self.checked_col(col, col_offset),
+                        )
+                        .and_then(|(row, col)| self.get(row, col)),
+                        Option::zip(
+                            self.checked_row(row, -row_offset),
+                            self.checked_col(col, -col_offset),
+                        )
+                        .and_then(|(row, col)| self.get(row, col)),
+                    )
+                    .is_some_and(|chars| matches!(chars, (b'M', b'S') | (b'S', b'M')))
+                }
+
+                fn checked_row(&self, row: usize, offset: isize) -> Option<usize> {
+                    row.checked_add_signed(offset)
+                        .filter(|&row| row < self.rows())
+                }
+
+                fn checked_col(&self, col: usize, offset: isize) -> Option<usize> {
+                    col.checked_add_signed(offset)
+                        .filter(|&col| col < self.columns)
+                }
+            }
+
+            part_two(input).unwrap().to_string()
+        },
+        Day4Implementation::OrigamiDuck => &mut || {
+            type Column = (char, char, char);
+            input
+                .lines()
+                .tuple_windows()
+                .fold(0, |acc: usize, lines: (&str, &str, &str)| {
+                    acc + izip!(lines.0.chars(), lines.1.chars(), lines.2.chars())
+                        .tuple_windows::<(Column, Column, Column)>()
+                        .filter(|columns| {
+                            columns.1.1 == 'A'
+                                && matches!(
+                                    (columns.0, columns.2),
+                                    (('M', _, 'M'), ('S', _, 'S'))
+                                        | (('S', _, 'S'), ('M', _, 'M'))
+                                        | (('M', _, 'S'), ('M', _, 'S'))
+                                        | (('S', _, 'M'), ('S', _, 'M'))
+                                )
+                        })
+                        .count()
+                })
+                .to_string()
+        },
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day4::new().known_solution_part2().unwrap()
         );
     });
 }

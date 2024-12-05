@@ -42,7 +42,7 @@ impl Matrix {
     }
 
     fn iterate_all(&self) -> impl Iterator<Item = (u8, u8, u8, u8)> {
-        (-1..1).cartesian_product(-1..1).flat_map(move |(x, y)| {
+        (-1..=1).cartesian_product(-1..=1).flat_map(move |(x, y)| {
             (0..self.row_count)
                 .flat_map(move |row| (0..self.col_count).map(move |col| (row, col)))
                 .flat_map(move |(row, col)| {
@@ -102,7 +102,7 @@ impl Solution for Day4 {
     }
 
     fn known_solution_part1(&self) -> Option<String> {
-        None
+        Some("2618".to_string())
     }
 
     fn part2(&mut self, input: &str) -> String {
@@ -114,7 +114,7 @@ impl Solution for Day4 {
     }
 
     fn known_solution_part2(&self) -> Option<String> {
-        None
+        Some("2011".to_string())
     }
 }
 
