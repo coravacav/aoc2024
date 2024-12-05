@@ -6,7 +6,7 @@ use std::{
 
 use ahash::AHashMap;
 use anyhow::Result;
-use aoc2024::{Solution, day3::Day3, day4::Day4};
+use aoc2024::{Solution, day3::Day3, day4::Day4, day5::Day5};
 use divan::Bencher;
 use itertools::{Itertools, izip};
 use nom::{
@@ -1255,6 +1255,43 @@ fn day4_part2_bench(bencher: Bencher, implementation: Day4Implementation) {
         assert_eq!(
             black_box(implementation()),
             Day4::new().known_solution_part2().unwrap()
+        );
+    });
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Day5Implementation {
+    First,
+}
+
+#[divan::bench(args = [Day5Implementation::First])]
+fn day5_part1_bench(bencher: Bencher, implementation: Day5Implementation) {
+    let input = black_box(include_str!("../inputs/5_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day5Implementation::First => &mut || Day5::new().part1(input),
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day5::new().known_solution_part1().unwrap()
+        );
+    });
+}
+
+#[divan::bench(args = [Day5Implementation::First])]
+fn day5_part2_bench(bencher: Bencher, implementation: Day5Implementation) {
+    let input = black_box(include_str!("../inputs/5_input.txt"));
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day5Implementation::First => &mut || Day5::new().part2(input),
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day5::new().known_solution_part2().unwrap()
         );
     });
 }
