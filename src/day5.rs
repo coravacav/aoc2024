@@ -97,7 +97,7 @@ impl Solution for Day5 {
             true
         }
 
-        let mut to_check = checks
+        checks
             .lines()
             .map(|check| {
                 check
@@ -106,14 +106,10 @@ impl Solution for Day5 {
                     .collect_vec()
             })
             .filter(|all| !check_one(all, &map))
-            .collect_vec();
-
-        to_check
-            .iter_mut()
-            .map(|all| {
+            .map(|mut all| {
                 let mut result: Vec<u32> = vec![];
 
-                while !check_one(all, &map) {
+                while !check_one(&all, &map) {
                     // check first for incoming edges
                     let first = all[0];
 
@@ -133,7 +129,7 @@ impl Solution for Day5 {
                 }
 
                 for x in all {
-                    result.push(*x);
+                    result.push(x);
                 }
 
                 result
