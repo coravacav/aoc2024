@@ -20,12 +20,12 @@ fn main() {
         assert_eq!(part1, known_part1);
     }
 
-    println!("Part 1: {}", solution.part1(input));
+    println!("Part 1: {}", part1);
 
     let part2 = solution.part2(input);
     if let Some(known_part2) = solution.known_solution_part2() {
         assert_eq!(part2, known_part2);
     }
 
-    println!("Part 2: {}", solution.part2(input));
+    println!("Part 2: {}", part2);
 }

@@ -2,6 +2,7 @@ pub trait Solution {
     fn new() -> Self
     where
         Self: Sized;
+
     fn part1(&mut self, input: &str) -> String;
     fn part2(&mut self, input: &str) -> String;
 
