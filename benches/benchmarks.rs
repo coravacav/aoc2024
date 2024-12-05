@@ -918,9 +918,10 @@ enum Day4Implementation {
     Mine,
     Alpha,
     OrigamiDuck,
+    OrigamiDuck2,
 }
 
-#[divan::bench(args = [Day4Implementation::Mine, Day4Implementation::Alpha, Day4Implementation::OrigamiDuck])]
+#[divan::bench(args = [Day4Implementation::Mine, Day4Implementation::Alpha, Day4Implementation::OrigamiDuck,Day4Implementation::OrigamiDuck2])]
 fn day4_part1_bench(bencher: Bencher, implementation: Day4Implementation) {
     let input = black_box(include_str!("../inputs/4_input.txt"));
 
@@ -1066,6 +1067,47 @@ fn day4_part1_bench(bencher: Bencher, implementation: Day4Implementation) {
                 })
                 .to_string()
         },
+        Day4Implementation::OrigamiDuck2 => &mut || {
+            macro_rules! matches_xmas {
+                ($input: expr) => {
+                    matches!($input, (b'X', b'M', b'A', b'S') | (b'S', b'A', b'M', b'X'))
+                };
+            }
+
+            fn part1(input: &str) -> anyhow::Result<usize> {
+                let line_length = input.find("\n").expect("at least one line");
+                type Column = (u8, u8, u8, u8);
+                Ok(input
+                    .lines()
+                    .chain(repeat_n(".".repeat(line_length).as_str(), 3))
+                    .tuple_windows()
+                    .fold(0, |acc: usize, lines: (&str, &str, &str, &str)| {
+                        acc + izip!(
+                            lines.0.bytes().chain(repeat_n(b'.', 3)),
+                            lines.1.bytes().chain(repeat_n(b'.', 3)),
+                            lines.2.bytes().chain(repeat_n(b'.', 3)),
+                            lines.3.bytes().chain(repeat_n(b'.', 3)),
+                        )
+                        .tuple_windows::<(Column, Column, Column, Column)>()
+                        .map(|columns| {
+                            let horizontal =
+                                matches_xmas!((columns.0.0, columns.1.0, columns.2.0, columns.3.0));
+                            let vertical = matches_xmas!(columns.0);
+                            let right_diagonal =
+                                matches_xmas!((columns.0.0, columns.1.1, columns.2.2, columns.3.3));
+                            let left_diagonal =
+                                matches_xmas!((columns.3.0, columns.2.1, columns.1.2, columns.0.3));
+                            horizontal as usize
+                                + vertical as usize
+                                + right_diagonal as usize
+                                + left_diagonal as usize
+                        })
+                        .sum::<usize>()
+                    }))
+            }
+
+            part1(input).unwrap().to_string()
+        },
     };
 
     bencher.bench_local(move || {
@@ -1076,7 +1118,7 @@ fn day4_part1_bench(bencher: Bencher, implementation: Day4Implementation) {
     });
 }
 
-#[divan::bench(args = [Day4Implementation::Mine, Day4Implementation::Alpha, Day4Implementation::OrigamiDuck])]
+#[divan::bench(args = [Day4Implementation::Mine, Day4Implementation::Alpha, Day4Implementation::OrigamiDuck,Day4Implementation::OrigamiDuck2])]
 fn day4_part2_bench(bencher: Bencher, implementation: Day4Implementation) {
     let input = black_box(include_str!("../inputs/4_input.txt"));
 
@@ -1180,6 +1222,32 @@ fn day4_part2_bench(bencher: Bencher, implementation: Day4Implementation) {
                         .count()
                 })
                 .to_string()
+        },
+
+        Day4Implementation::OrigamiDuck2 => &mut || {
+            fn part2(input: &str) -> anyhow::Result<usize> {
+                type Column = (u8, u8, u8);
+                Ok(input.lines().tuple_windows().fold(
+                    0,
+                    |acc: usize, lines: (&str, &str, &str)| {
+                        acc + izip!(lines.0.bytes(), lines.1.bytes(), lines.2.bytes())
+                            .tuple_windows::<(Column, Column, Column)>()
+                            .filter(|columns| {
+                                columns.1.1 == b'A'
+                                    && matches!(
+                                        (columns.0, columns.2),
+                                        ((b'M', _, b'M'), (b'S', _, b'S'))
+                                            | ((b'S', _, b'S'), (b'M', _, b'M'))
+                                            | ((b'M', _, b'S'), (b'M', _, b'S'))
+                                            | ((b'S', _, b'M'), (b'S', _, b'M'))
+                                    )
+                            })
+                            .count()
+                    },
+                ))
+            }
+
+            part2(input).unwrap().to_string()
         },
     };
 
