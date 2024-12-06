@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::{BTreeSet, BinaryHeap, HashMap},
     hint::black_box,
     iter::{once, repeat_n},
@@ -1261,15 +1262,60 @@ fn day4_part2_bench(bencher: Bencher, implementation: Day4Implementation) {
 
 #[derive(Debug, Clone, Copy)]
 enum Day5Implementation {
-    First,
+    Mine,
+    Duck,
+    Alpha,
 }
 
-#[divan::bench(args = [Day5Implementation::First])]
+#[divan::bench(args = [Day5Implementation::Mine, Day5Implementation::Duck, Day5Implementation::Alpha])]
 fn day5_part1_bench(bencher: Bencher, implementation: Day5Implementation) {
     let input = black_box(include_str!("../inputs/5_input.txt"));
 
     let implementation: &mut dyn FnMut() -> String = match implementation {
-        Day5Implementation::First => &mut || Day5::new().part1(input),
+        Day5Implementation::Mine => &mut || Day5::new().part1(input),
+        Day5Implementation::Duck => &mut || {
+            fn sort_pages(rules: &HashMap<usize, Vec<usize>>, a: &usize, b: &usize) -> Ordering {
+                if let Some(must_come_after) = rules.get(a) {
+                    if must_come_after.contains(b) {
+                        return Ordering::Less;
+                    }
+                } else if let Some(must_come_after) = rules.get(b) {
+                    if must_come_after.contains(a) {
+                        return Ordering::Greater;
+                    }
+                }
+                Ordering::Equal
+            }
+            fn part1(input: &str) -> anyhow::Result<usize> {
+                let (rules, updates) = input.split_once("\n\n").expect("rules and updates");
+                let rules = rules
+                    .lines()
+                    .map(|line| -> (usize, usize) {
+                        let (left, right) = line.split_once("|").expect("each rule has two parts");
+                        (
+                            left.parse().expect("valid page number"),
+                            right.parse().expect("valid page number"),
+                        )
+                    })
+                    .into_group_map();
+
+                Ok(updates
+                    .lines()
+                    .map(|line| {
+                        line.split(",")
+                            .map(|s| s.parse::<usize>().expect("valid page number"))
+                            .collect::<Vec<_>>()
+                    })
+                    .filter(|pages| {
+                        pages.is_sorted_by(|a, b| sort_pages(&rules, a, b) == Ordering::Less)
+                    })
+                    .map(|pages| pages[pages.len() / 2])
+                    .sum())
+            }
+
+            part1(input).unwrap().to_string()
+        },
+        Day5Implementation::Alpha => &mut || alpha_day_5::part_one(input).unwrap().to_string(),
     };
 
     bencher.bench_local(move || {
@@ -1280,12 +1326,63 @@ fn day5_part1_bench(bencher: Bencher, implementation: Day5Implementation) {
     });
 }
 
-#[divan::bench(args = [Day5Implementation::First])]
+#[divan::bench(args = [Day5Implementation::Mine, Day5Implementation::Duck, Day5Implementation::Alpha])]
 fn day5_part2_bench(bencher: Bencher, implementation: Day5Implementation) {
     let input = black_box(include_str!("../inputs/5_input.txt"));
 
     let implementation: &mut dyn FnMut() -> String = match implementation {
-        Day5Implementation::First => &mut || Day5::new().part2(input),
+        Day5Implementation::Mine => &mut || Day5::new().part2(input),
+        Day5Implementation::Duck => &mut || {
+            fn sort_pages(rules: &HashMap<usize, Vec<usize>>, a: &usize, b: &usize) -> Ordering {
+                if let Some(must_come_after) = rules.get(a) {
+                    if must_come_after.contains(b) {
+                        return Ordering::Less;
+                    }
+                } else if let Some(must_come_after) = rules.get(b) {
+                    if must_come_after.contains(a) {
+                        return Ordering::Greater;
+                    }
+                }
+                Ordering::Equal
+            }
+
+            fn part2(input: &str) -> anyhow::Result<usize> {
+                let (rules, updates) = input.split_once("\n\n").expect("rules and updates");
+                let rules = rules
+                    .lines()
+                    .map(|line| -> (usize, usize) {
+                        let (left, right) = line.split_once("|").expect("each rule has two parts");
+                        (
+                            left.parse().expect("valid page number"),
+                            right.parse().expect("valid page number"),
+                        )
+                    })
+                    .into_group_map();
+
+                Ok(updates
+                    .lines()
+                    .map(|line| {
+                        line.split(",")
+                            .map(|s| s.parse::<usize>().expect("valid page number"))
+                            .collect::<Vec<_>>()
+                    })
+                    .filter(|pages| {
+                        !pages.is_sorted_by(|a, b| sort_pages(&rules, a, b) == Ordering::Less)
+                    })
+                    .map(|pages| {
+                        let half = pages.len() / 2;
+                        pages
+                            .into_iter()
+                            .sorted_by(|a, b| sort_pages(&rules, a, b))
+                            .nth(half)
+                            .expect("valid middle element")
+                    })
+                    .sum())
+            }
+
+            part2(input).unwrap().to_string()
+        },
+        Day5Implementation::Alpha => &mut || alpha_day_5::part_two(input).unwrap().to_string(),
     };
 
     bencher.bench_local(move || {
@@ -1294,4 +1391,115 @@ fn day5_part2_bench(bencher: Bencher, implementation: Day5Implementation) {
             Day5::new().known_solution_part2().unwrap()
         );
     });
+}
+
+mod alpha_day_5 {
+    use std::{
+        collections::HashSet,
+        iter,
+        num::ParseIntError,
+        str::{FromStr, Lines},
+    };
+
+    use derive_more::derive::{Deref, DerefMut};
+    use itertools::Itertools;
+
+    #[derive(Debug, Deref, DerefMut)]
+    struct Rules(HashSet<Rule>);
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    struct Rule(Page, Page);
+
+    #[derive(Debug)]
+    enum ParseRuleError {
+        MissingBar,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    struct Page(u16);
+
+    pub fn part_one(input: &str) -> anyhow::Result<u16> {
+        let mut lines = input.lines();
+        let rules = parse_rules(&mut lines);
+
+        let answer = lines
+            .map(parse_updates)
+            .filter_ok(|pages| {
+                !pages
+                    .windows(2)
+                    .any(|pages| pages[0].should_come_after(pages[1], &rules))
+            })
+            .map_ok(|pages| pages[pages.len() / 2].0)
+            .sum::<Result<u16, _>>()?;
+
+        Ok(answer)
+    }
+
+    pub fn part_two(input: &str) -> anyhow::Result<u16> {
+        let mut lines = input.lines();
+        let rules = parse_rules(&mut lines);
+
+        let answer = lines
+            .map(parse_updates)
+            .filter_map_ok(|mut pages| {
+                let mut was_incorrect = false;
+                let mut swapped = true;
+
+                while swapped {
+                    swapped = false;
+
+                    for (i, j) in iter::zip(0.., 1..).take(pages.len() - 1) {
+                        if pages[i].should_come_after(pages[j], &rules) {
+                            was_incorrect = true;
+                            pages.swap(i, j);
+                            swapped = true;
+                        }
+                    }
+                }
+
+                was_incorrect.then(|| pages[pages.len() / 2].0)
+            })
+            .sum::<Result<u16, _>>()?;
+
+        Ok(answer)
+    }
+
+    fn parse_rules(lines: &mut Lines<'_>) -> Rules {
+        lines
+            .take_while(|line| !line.is_empty())
+            .map(|line| line.parse::<Rule>())
+            .collect::<Result<HashSet<_>, _>>()
+            .map(Rules)
+            .unwrap()
+    }
+
+    fn parse_updates(line: &str) -> Result<Vec<Page>, ParseIntError> {
+        line.split(',').map(|num| num.parse::<Page>()).collect()
+    }
+
+    impl FromStr for Rule {
+        type Err = ParseRuleError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let (page1, page2) = s.split_once('|').ok_or(ParseRuleError::MissingBar)?;
+            let page1 = page1.parse::<Page>().unwrap();
+            let page2 = page2.parse::<Page>().unwrap();
+
+            Ok(Self(page1, page2))
+        }
+    }
+
+    impl Page {
+        fn should_come_after(self, other: Self, rules: &Rules) -> bool {
+            rules.contains(&Rule(other, self))
+        }
+    }
+
+    impl FromStr for Page {
+        type Err = ParseIntError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            s.parse::<u16>().map(Self)
+        }
+    }
 }
