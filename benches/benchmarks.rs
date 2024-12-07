@@ -7,7 +7,13 @@ use std::{
 
 use ahash::AHashMap;
 use anyhow::Result;
-use aoc2024::{Solution, day3::Day3, day4::Day4, day5::Day5, day6::Day6};
+use aoc2024::{
+    Solution,
+    day3::Day3,
+    day4::Day4,
+    day5::Day5,
+    day6::{Day6, Grid},
+};
 use divan::Bencher;
 use itertools::{Itertools, izip};
 use nom::{
@@ -1538,5 +1544,14 @@ fn day6_part2_bench(bencher: Bencher, implementation: Day6Implementation) {
             black_box(implementation()),
             Day6::new().known_solution_part2().unwrap()
         );
+    });
+}
+
+#[divan::bench]
+fn grid_new(bencher: Bencher) {
+    let input = include_str!("../inputs/6_input.txt");
+
+    bencher.bench_local(move || {
+        Grid::new(black_box(input), |c| c);
     });
 }

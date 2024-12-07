@@ -1,20 +1,18 @@
 use std::{
     fmt::{Debug, Display},
     ops::{Index, IndexMut},
-    sync::Arc,
 };
 
 use ahash::AHashSet;
-use dashmap::DashMap;
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::Solution;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-struct Coord {
-    row: isize,
-    col: isize,
+pub struct Coord {
+    row: i16,
+    col: i16,
 }
 
 impl std::fmt::Debug for Coord {
@@ -24,21 +22,22 @@ impl std::fmt::Debug for Coord {
 }
 
 impl Coord {
-    fn new(row: isize, col: isize) -> Self {
+    fn new(row: i16, col: i16) -> Self {
         Self { row, col }
     }
 
     fn new_usize(row: usize, col: usize) -> Self {
-        Self::new(isize::try_from(row).unwrap(), isize::try_from(col).unwrap())
+        Self::new(i16::try_from(row).unwrap(), i16::try_from(col).unwrap())
     }
 
+    #[allow(dead_code)]
     fn from_enumerated_grid<T>(grid: &Grid<T>, index: usize) -> Self {
-        let i = isize::try_from(index).unwrap();
+        let i = i16::try_from(index).unwrap();
 
         Self::new(i / grid.width, i % grid.width)
     }
 
-    fn in_bounds(&self, width: isize, height: isize) -> bool {
+    fn in_bounds(&self, width: i16, height: i16) -> bool {
         self.row >= 0 && self.row < height && self.col >= 0 && self.col < width
     }
 }
@@ -81,6 +80,7 @@ impl std::fmt::Display for Direction {
 }
 
 impl Direction {
+    #[allow(dead_code)]
     fn from_direction(direction: char) -> Option<Self> {
         match direction {
             '^' => Some(Self::Up),
@@ -111,10 +111,10 @@ impl Direction {
 }
 
 #[derive(Debug, Clone)]
-struct Grid<T> {
+pub struct Grid<T> {
     data: Vec<T>,
-    width: isize,
-    height: isize,
+    width: i16,
+    height: i16,
 }
 
 #[derive(Debug)]
@@ -125,7 +125,6 @@ enum NextResult {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[repr(u8)]
 enum GridType {
     Empty,
     Wall,
@@ -156,51 +155,76 @@ fn next_val(grid: &Grid<GridType>, coord: Coord, dir: Direction) -> NextResult {
 }
 
 impl<T> Grid<T> {
-    fn new(input: &str, char_to_t: impl Fn(char) -> T) -> Self {
-        let mut grid = vec![];
-        let mut width = None;
+    pub fn new(input: &str, char_to_t: impl Fn(u8) -> T) -> Self {
+        let mut grid = Vec::with_capacity(input.len());
         let mut height = 0;
 
-        for line in input.lines() {
-            let line = line.chars().map(&char_to_t).collect_vec();
-
-            if width.is_none() {
-                width = Some(isize::try_from(line.len()).unwrap());
+        for c in input.as_bytes() {
+            match c {
+                b'\n' => {
+                    height += 1;
+                }
+                c => {
+                    grid.push(char_to_t(*c));
+                }
             }
-
-            height += 1;
-
-            grid.extend(line);
         }
 
+        let height = if input.as_bytes().last() != Some(&b'\n') {
+            height + 1
+        } else {
+            height
+        };
+
+        // Check if the width = height length makes sense
+        let usize_height = height as usize;
+        let guess_size = usize_height * usize_height + usize_height - 1;
+
+        let width = if input.len() != guess_size {
+            // First length till newline
+            let mut width = 0;
+            for c in input.as_bytes() {
+                if *c == b'\n' {
+                    break;
+                }
+                width += 1;
+            }
+
+            width
+        } else {
+            height
+        };
+
         Self {
-            width: width.unwrap(),
+            width,
             height,
             data: grid,
         }
     }
 
-    fn iter_with_coords(&self) -> impl DoubleEndedIterator<Item = (Coord, &T)> {
+    pub fn iter_with_coords(&self) -> impl DoubleEndedIterator<Item = (Coord, &T)> {
         self.data.iter().enumerate().map(|(i, t)| {
-            let i = isize::try_from(i).unwrap();
+            let i = i16::try_from(i).unwrap();
 
             (Coord::new(i / self.width, i % self.width), t)
         })
     }
 
-    fn iter_lines(&self) -> impl DoubleEndedIterator<Item = &[T]> {
+    pub fn iter_lines(&self) -> impl DoubleEndedIterator<Item = &[T]> {
         self.data.chunks(self.width as usize)
     }
 }
 
 impl<T: Display> Grid<T> {
-    fn pretty_print(&self) {
+    #[allow(dead_code)]
+    pub fn pretty_print(&self) {
         for line in self.iter_lines() {
             println!("{}", line.iter().map(|t| t.to_string()).join(""));
         }
     }
 
-    fn pretty_print_bolded_coord(&self, coord: Coord) {
+    #[allow(dead_code)]
+    pub fn pretty_print_bolded_coord(&self, coord: Coord) {
         for (i, line) in self.iter_lines().enumerate() {
             println!(
                 "{}",
@@ -267,12 +291,12 @@ impl Solution for Day6 {
 
     fn part1(&mut self, input: &str) -> String {
         let grid = Grid::new(input, |c| match c {
-            '.' => GridType::Empty,
-            '#' => GridType::Wall,
-            '^' => GridType::Direction(Direction::Up),
-            'v' => GridType::Direction(Direction::Down),
-            '>' => GridType::Direction(Direction::Right),
-            '<' => GridType::Direction(Direction::Left),
+            b'.' => GridType::Empty,
+            b'#' => GridType::Wall,
+            b'^' => GridType::Direction(Direction::Up),
+            b'v' => GridType::Direction(Direction::Down),
+            b'>' => GridType::Direction(Direction::Right),
+            b'<' => GridType::Direction(Direction::Left),
             _ => unreachable!(),
         });
 
@@ -296,12 +320,12 @@ impl Solution for Day6 {
 
     fn part2(&mut self, input: &str) -> String {
         let grid = Grid::new(input, |c| match c {
-            '.' => GridType::Empty,
-            '#' => GridType::Wall,
-            '^' => GridType::Direction(Direction::Up),
-            'v' => GridType::Direction(Direction::Down),
-            '>' => GridType::Direction(Direction::Right),
-            '<' => GridType::Direction(Direction::Left),
+            b'.' => GridType::Empty,
+            b'#' => GridType::Wall,
+            b'^' => GridType::Direction(Direction::Up),
+            b'v' => GridType::Direction(Direction::Down),
+            b'>' => GridType::Direction(Direction::Right),
+            b'<' => GridType::Direction(Direction::Left),
             _ => unreachable!(),
         });
 
