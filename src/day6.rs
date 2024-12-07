@@ -1,10 +1,13 @@
 use std::{
     fmt::{Debug, Display},
     ops::{Index, IndexMut},
+    sync::Arc,
 };
 
 use ahash::AHashSet;
+use dashmap::DashMap;
 use itertools::Itertools;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::Solution;
 
@@ -311,41 +314,42 @@ impl Solution for Day6 {
             })
             .unwrap();
 
-        let mut count = 0;
-
         let visited_cells = get_visited_cells_till_exit(&grid, starting_coord, *starting_dir);
 
-        for &to_edit_coord in visited_cells.iter().skip(1) {
-            let mut new_grid = grid.clone();
-            let mut coord = starting_coord;
-            let mut dir = *starting_dir;
-            let mut visited_cells = AHashSet::new();
+        visited_cells
+            .par_iter()
+            .map(|to_edit_coord| {
+                let mut coord = starting_coord;
+                let mut dir = *starting_dir;
+                let mut visited_cells = AHashSet::new();
 
-            // edit to_edit_coord to a wall
-            new_grid[to_edit_coord] = GridType::Wall;
+                visited_cells.insert((coord, dir));
 
-            visited_cells.insert((coord, dir));
+                loop {
+                    let next = if *to_edit_coord == (coord + dir.to_tuple_offset()) {
+                        NextResult::HasBlock
+                    } else {
+                        next_val(&grid, coord, dir)
+                    };
 
-            loop {
-                match next_val(&new_grid, coord, dir) {
-                    NextResult::HasBlock => {
-                        dir = dir.rotate_right();
-                    }
-                    NextResult::Empty => {
-                        coord += dir.to_tuple_offset();
-                        if !visited_cells.insert((coord, dir)) {
-                            count += 1;
-                            break;
+                    match next {
+                        NextResult::HasBlock => {
+                            dir = dir.rotate_right();
+                        }
+                        NextResult::Empty => {
+                            coord += dir.to_tuple_offset();
+                            if !visited_cells.insert((coord, dir)) {
+                                return 1;
+                            }
+                        }
+                        NextResult::OutOfBounds => {
+                            return 0;
                         }
                     }
-                    NextResult::OutOfBounds => {
-                        break;
-                    }
                 }
-            }
-        }
-
-        count.to_string()
+            })
+            .sum::<u16>()
+            .to_string()
     }
 
     fn known_solution_part2(&self) -> Option<String> {
