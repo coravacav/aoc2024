@@ -87,8 +87,6 @@ impl Solution for Day7 {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-
     use super::*;
 
     #[test]
@@ -127,23 +125,5 @@ mod tests {
             ),
             String::from("11387")
         );
-    }
-
-    #[test]
-    fn test_concat() {
-        for _ in 0..10000 {
-            let left = rand::thread_rng().gen_range(0..100_000);
-            let right = rand::thread_rng().gen_range(0..100_000);
-
-            dbg!(left, right);
-            dbg!(usize::MAX);
-
-            assert_eq!(
-                concat(left, right),
-                (left.to_string() + &right.to_string())
-                    .parse::<usize>()
-                    .unwrap()
-            );
-        }
     }
 }

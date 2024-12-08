@@ -53,6 +53,35 @@ impl std::ops::Add<Coord> for Coord {
     }
 }
 
+impl std::ops::Sub<Coord> for Coord {
+    type Output = Self;
+
+    fn sub(self, other: Coord) -> Self::Output {
+        Self {
+            row: self.row - other.row,
+            col: self.col - other.col,
+        }
+    }
+}
+
+impl std::ops::SubAssign<Coord> for Coord {
+    fn sub_assign(&mut self, other: Coord) {
+        self.row -= other.row;
+        self.col -= other.col;
+    }
+}
+
+impl std::ops::Mul<i16> for Coord {
+    type Output = Self;
+
+    fn mul(self, other: i16) -> Self::Output {
+        Self {
+            row: self.row * other,
+            col: self.col * other,
+        }
+    }
+}
+
 impl std::ops::AddAssign<Coord> for Coord {
     fn add_assign(&mut self, other: Coord) {
         self.row += other.row;
@@ -212,6 +241,10 @@ impl<T> Grid<T> {
 
     pub fn iter_lines(&self) -> impl DoubleEndedIterator<Item = &[T]> {
         self.data.chunks(self.width as usize)
+    }
+
+    pub fn is_coord_in_bounds(&self, coord: Coord) -> bool {
+        coord.in_bounds(self.width, self.height)
     }
 }
 
