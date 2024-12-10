@@ -2,7 +2,8 @@ use ahash::AHashSet;
 
 use crate::{
     Solution,
-    day6::{Coord, Grid, QuadDirection},
+    direction::QuadDirection,
+    grid::{Coord, Grid},
 };
 
 pub struct Day10 {}
@@ -98,7 +99,7 @@ impl Solution for Day10 {
     }
 
     fn known_solution_part2(&self) -> Option<String> {
-        None
+        Some(String::from("1372"))
     }
 }
 

@@ -21,7 +21,7 @@ impl Solution for Day9 {
         let mut arr = input
             .chars()
             .enumerate()
-            .flat_map(|(i, c)| match (i % 2, c) {
+            .flat_map(|(i, c)| match (i % 2, dbg!(c)) {
                 (0, c) => {
                     let new =
                         std::iter::repeat_n(Space::File(file_id), c.to_digit(10).unwrap() as usize);
