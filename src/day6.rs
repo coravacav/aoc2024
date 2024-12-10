@@ -90,11 +90,12 @@ impl std::ops::AddAssign<Coord> for Coord {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-enum Direction {
+pub enum Direction {
     Up,
     Down,
     Left,
     Right,
+    None,
 }
 
 impl std::fmt::Display for Direction {
@@ -104,6 +105,7 @@ impl std::fmt::Display for Direction {
             Direction::Down => write!(f, "v"),
             Direction::Left => write!(f, "<"),
             Direction::Right => write!(f, ">"),
+            Direction::None => write!(f, "?"),
         }
     }
 }
@@ -126,6 +128,7 @@ impl Direction {
             Self::Down => Self::Left,
             Self::Left => Self::Up,
             Self::Right => Self::Down,
+            Self::None => panic!("Cannot rotate None"),
         }
     }
 
@@ -135,7 +138,44 @@ impl Direction {
             Self::Down => Coord { row: 1, col: 0 },
             Self::Left => Coord { row: 0, col: -1 },
             Self::Right => Coord { row: 0, col: 1 },
+            Self::None => panic!("Cannot get offset of None"),
         }
+    }
+
+    pub fn get_non_opposite_directions(self) -> &'static [Self] {
+        match self {
+            Self::Up => &[Self::Right, Self::Up, Self::Left],
+            Self::Down => &[Self::Left, Self::Down, Self::Right],
+            Self::Left => &[Self::Down, Self::Left, Self::Up],
+            Self::Right => &[Self::Up, Self::Right, Self::Down],
+            Self::None => &[Self::Right, Self::Down, Self::Left, Self::Up],
+        }
+    }
+
+    pub fn get_all_other_directions(self) -> &'static [Self] {
+        match self {
+            Self::Up => &[Self::Right, Self::Down, Self::Left],
+            Self::Down => &[Self::Left, Self::Up, Self::Right],
+            Self::Left => &[Self::Up, Self::Right, Self::Down],
+            Self::Right => &[Self::Down, Self::Left, Self::Up],
+            Self::None => &[Self::Right, Self::Down, Self::Left, Self::Up],
+        }
+    }
+}
+
+impl std::ops::Add<Coord> for Direction {
+    type Output = Coord;
+
+    fn add(self, other: Coord) -> Self::Output {
+        other + self.to_tuple_offset()
+    }
+}
+
+impl std::ops::Add<Direction> for Coord {
+    type Output = Coord;
+
+    fn add(self, other: Direction) -> Self::Output {
+        self + other.to_tuple_offset()
     }
 }
 
@@ -245,6 +285,14 @@ impl<T> Grid<T> {
 
     pub fn is_coord_in_bounds(&self, coord: Coord) -> bool {
         coord.in_bounds(self.width, self.height)
+    }
+
+    pub fn get(&self, coord: Coord) -> Option<&T> {
+        if !self.is_coord_in_bounds(coord) {
+            return None;
+        }
+
+        Some(&self[coord])
     }
 }
 
