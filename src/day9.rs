@@ -47,8 +47,10 @@ impl Solution for Day9 {
         while !is_solved(&arr) {
             // replace first empty with last file
             let first_empty = arr.iter_mut().position(|s| *s == Space::Empty).unwrap();
-            let last_file = arr.iter().rev().position(|s| matches!(*s, Space::File(_)));
-            let last_file = arr.len() - last_file.unwrap() - 1;
+            let last_file = arr
+                .iter()
+                .rposition(|s| matches!(*s, Space::File(_)))
+                .unwrap();
 
             arr.swap(first_empty, last_file);
         }
