@@ -90,7 +90,7 @@ impl std::ops::AddAssign<Coord> for Coord {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub enum Direction {
+pub enum QuadDirection {
     Up,
     Down,
     Left,
@@ -98,19 +98,19 @@ pub enum Direction {
     None,
 }
 
-impl std::fmt::Display for Direction {
+impl std::fmt::Display for QuadDirection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Direction::Up => write!(f, "^"),
-            Direction::Down => write!(f, "v"),
-            Direction::Left => write!(f, "<"),
-            Direction::Right => write!(f, ">"),
-            Direction::None => write!(f, "?"),
+            QuadDirection::Up => write!(f, "^"),
+            QuadDirection::Down => write!(f, "v"),
+            QuadDirection::Left => write!(f, "<"),
+            QuadDirection::Right => write!(f, ">"),
+            QuadDirection::None => write!(f, "?"),
         }
     }
 }
 
-impl Direction {
+impl QuadDirection {
     #[allow(dead_code)]
     fn from_direction(direction: char) -> Option<Self> {
         match direction {
@@ -122,7 +122,7 @@ impl Direction {
         }
     }
 
-    fn rotate_right(self) -> Direction {
+    fn rotate_right(self) -> QuadDirection {
         match self {
             Self::Up => Self::Right,
             Self::Down => Self::Left,
@@ -163,7 +163,7 @@ impl Direction {
     }
 }
 
-impl std::ops::Add<Coord> for Direction {
+impl std::ops::Add<Coord> for QuadDirection {
     type Output = Coord;
 
     fn add(self, other: Coord) -> Self::Output {
@@ -171,10 +171,10 @@ impl std::ops::Add<Coord> for Direction {
     }
 }
 
-impl std::ops::Add<Direction> for Coord {
+impl std::ops::Add<QuadDirection> for Coord {
     type Output = Coord;
 
-    fn add(self, other: Direction) -> Self::Output {
+    fn add(self, other: QuadDirection) -> Self::Output {
         self + other.to_tuple_offset()
     }
 }
@@ -197,7 +197,7 @@ enum NextResult {
 enum GridType {
     Empty,
     Wall,
-    Direction(Direction),
+    Direction(QuadDirection),
 }
 
 impl std::fmt::Display for GridType {
@@ -210,7 +210,7 @@ impl std::fmt::Display for GridType {
     }
 }
 
-fn next_val(grid: &Grid<GridType>, coord: Coord, dir: Direction) -> NextResult {
+fn next_val(grid: &Grid<GridType>, coord: Coord, dir: QuadDirection) -> NextResult {
     let next_coord = coord + dir.to_tuple_offset();
 
     if !next_coord.in_bounds(grid.width, grid.height) {
@@ -340,7 +340,7 @@ impl<T> IndexMut<Coord> for Grid<T> {
 fn get_visited_cells_till_exit(
     grid: &Grid<GridType>,
     mut coord: Coord,
-    mut dir: Direction,
+    mut dir: QuadDirection,
 ) -> AHashSet<Coord> {
     let mut visited_cells = AHashSet::new();
 
@@ -374,10 +374,10 @@ impl Solution for Day6 {
         let grid = Grid::new(input, |c| match c {
             b'.' => GridType::Empty,
             b'#' => GridType::Wall,
-            b'^' => GridType::Direction(Direction::Up),
-            b'v' => GridType::Direction(Direction::Down),
-            b'>' => GridType::Direction(Direction::Right),
-            b'<' => GridType::Direction(Direction::Left),
+            b'^' => GridType::Direction(QuadDirection::Up),
+            b'v' => GridType::Direction(QuadDirection::Down),
+            b'>' => GridType::Direction(QuadDirection::Right),
+            b'<' => GridType::Direction(QuadDirection::Left),
             _ => unreachable!(),
         });
 
@@ -403,10 +403,10 @@ impl Solution for Day6 {
         let grid = Grid::new(input, |c| match c {
             b'.' => GridType::Empty,
             b'#' => GridType::Wall,
-            b'^' => GridType::Direction(Direction::Up),
-            b'v' => GridType::Direction(Direction::Down),
-            b'>' => GridType::Direction(Direction::Right),
-            b'<' => GridType::Direction(Direction::Left),
+            b'^' => GridType::Direction(QuadDirection::Up),
+            b'v' => GridType::Direction(QuadDirection::Down),
+            b'>' => GridType::Direction(QuadDirection::Right),
+            b'<' => GridType::Direction(QuadDirection::Left),
             _ => unreachable!(),
         });
 

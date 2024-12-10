@@ -2,7 +2,7 @@ use ahash::AHashSet;
 
 use crate::{
     Solution,
-    day6::{Coord, Direction, Grid},
+    day6::{Coord, Grid, QuadDirection},
 };
 
 pub struct Day10 {}
@@ -19,7 +19,7 @@ impl Solution for Day10 {
             .filter(|(_, c)| **c == b'0')
             .map(|(c, _)| {
                 #[derive(Debug, Copy, Clone)]
-                struct Item(Coord, Direction);
+                struct Item(Coord, QuadDirection);
                 impl std::hash::Hash for Item {
                     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
                         self.0.hash(state);
@@ -33,7 +33,7 @@ impl Solution for Day10 {
                 impl Eq for Item {}
 
                 let mut current_stack: AHashSet<Item> = AHashSet::new();
-                current_stack.insert(Item(c, Direction::None));
+                current_stack.insert(Item(c, QuadDirection::None));
 
                 for next in b'1'..=b'9' {
                     let mut next_stack = AHashSet::new();
@@ -70,7 +70,7 @@ impl Solution for Day10 {
         grid.iter_with_coords()
             .filter(|(_, c)| **c == b'0')
             .map(|(c, _)| {
-                let mut current_stack: Vec<(Coord, Direction)> = vec![(c, Direction::None)];
+                let mut current_stack: Vec<(Coord, QuadDirection)> = vec![(c, QuadDirection::None)];
 
                 for next in b'1'..=b'9' {
                     let mut next_stack = Vec::new();
