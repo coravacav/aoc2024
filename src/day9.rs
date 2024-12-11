@@ -1,3 +1,5 @@
+use std::num::NonZeroU16;
+
 use itertools::Itertools;
 
 use crate::Solution;
@@ -6,7 +8,7 @@ pub struct Day9 {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Space {
-    File(usize),
+    File(NonZeroU16),
     Empty,
 }
 
@@ -16,52 +18,53 @@ impl Solution for Day9 {
     }
 
     fn part1(&mut self, input: &str) -> String {
-        let mut file_id = 0;
+        let mut file_id = NonZeroU16::new(1).unwrap();
 
-        let mut arr = input
+        assert!(size_of::<Space>() == size_of::<u16>());
+
+        let arr = input
             .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
             .enumerate()
-            .flat_map(|(i, c)| match (i % 2, dbg!(c)) {
-                (0, c) => {
-                    let new =
-                        std::iter::repeat_n(Space::File(file_id), c.to_digit(10).unwrap() as usize);
-
-                    file_id += 1;
-
-                    new
-                }
-                (1, c) => std::iter::repeat_n(Space::Empty, c.to_digit(10).unwrap() as usize),
-                _ => unreachable!(),
+            .map(|(i, c)| {
+                (
+                    if i % 2 == 0 {
+                        let new = Space::File(file_id);
+                        file_id = file_id.checked_add(1).unwrap();
+                        new
+                    } else {
+                        Space::Empty
+                    },
+                    c,
+                )
             })
+            .flat_map(|(file, c)| std::iter::repeat_n(file, c))
             .collect_vec();
 
-        fn is_solved(arr: &[Space]) -> bool {
-            let first_space = arr.iter().position(|s| *s == Space::Empty);
-            if let Some(first_space) = first_space {
-                arr[first_space..].iter().all(|s| *s == Space::Empty)
-            } else {
-                false
-            }
-        }
+        let mut read_backwards_files = arr
+            .iter()
+            .enumerate()
+            .rev()
+            .filter(|s| matches!(*s.1, Space::File(_)));
 
-        while !is_solved(&arr) {
-            // replace first empty with last file
-            let first_empty = arr.iter_mut().position(|s| *s == Space::Empty).unwrap();
-            let last_file = arr
-                .iter()
-                .rposition(|s| matches!(*s, Space::File(_)))
-                .unwrap();
-
-            arr.swap(first_empty, last_file);
-        }
-
-        // calculate checksum
+        let mut stop_index = arr.len();
 
         arr.iter()
-            .take_while(|s| matches!(*s, Space::File(_)))
             .enumerate()
+            .map_while(|(i, s)| match s {
+                Space::File(c) if i <= stop_index => Some((i, Space::File(*c))),
+                _ => {
+                    let (index, next) = read_backwards_files.next().unwrap();
+                    stop_index = index - 1;
+                    if i >= index || i >= stop_index {
+                        None
+                    } else {
+                        Some((i, *next))
+                    }
+                }
+            })
             .map(|(i, s)| match s {
-                Space::File(c) => c * i,
+                Space::File(c) => (c.get() as usize - 1) * i,
                 _ => unreachable!(),
             })
             .sum::<usize>()
@@ -69,27 +72,29 @@ impl Solution for Day9 {
     }
 
     fn known_solution_part1(&self) -> Option<String> {
-        None
+        Some(String::from("6448989155953"))
     }
 
     fn part2(&mut self, input: &str) -> String {
-        let mut file_id = 0;
+        let mut file_id = NonZeroU16::new(1).unwrap();
 
         let mut arr = input
             .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
             .enumerate()
-            .flat_map(|(i, c)| match (i % 2, c) {
-                (0, c) => {
-                    let new =
-                        std::iter::repeat_n(Space::File(file_id), c.to_digit(10).unwrap() as usize);
-
-                    file_id += 1;
-
-                    new
-                }
-                (1, c) => std::iter::repeat_n(Space::Empty, c.to_digit(10).unwrap() as usize),
-                _ => unreachable!(),
+            .map(|(i, c)| {
+                (
+                    if i % 2 == 0 {
+                        let new = Space::File(file_id);
+                        file_id = file_id.checked_add(1).unwrap();
+                        new
+                    } else {
+                        Space::Empty
+                    },
+                    c,
+                )
             })
+            .flat_map(|(file, c)| std::iter::repeat_n(file, c))
             .collect_vec();
 
         let binding = arr
@@ -148,7 +153,7 @@ impl Solution for Day9 {
             .enumerate()
             .filter(|(_, s)| **s != Space::Empty)
             .map(|(i, s)| match s {
-                Space::File(c) => c * i,
+                Space::File(c) => (c.get() as usize - 1) * i,
                 _ => unreachable!(),
             })
             .sum::<usize>()
@@ -156,7 +161,7 @@ impl Solution for Day9 {
     }
 
     fn known_solution_part2(&self) -> Option<String> {
-        None
+        Some(String::from("6476642796832"))
     }
 }
 

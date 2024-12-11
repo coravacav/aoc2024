@@ -7,13 +7,7 @@ use std::{
 
 use ahash::AHashMap;
 use anyhow::Result;
-use aoc2024::{
-    Solution,
-    day3::Day3,
-    day4::Day4,
-    day5::Day5,
-    day6::{Day6, Grid},
-};
+use aoc2024::{Solution, day3::Day3, day4::Day4, day5::Day5, day6::Day6, day9::Day9, grid::Grid};
 use divan::Bencher;
 use itertools::{Itertools, izip};
 use nom::{
@@ -1553,5 +1547,42 @@ fn grid_new(bencher: Bencher) {
 
     bencher.bench_local(move || {
         Grid::new(black_box(input), |c| c);
+    });
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Day9Implementation {
+    Mine,
+}
+
+#[divan::bench(args = [Day9Implementation::Mine])]
+fn day9_part1_bench(bencher: Bencher, implementation: Day9Implementation) {
+    let input = include_str!("../inputs/6_input.txt");
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day9Implementation::Mine => &mut || Day9::new().part1(input),
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day9::new().known_solution_part1().unwrap()
+        );
+    });
+}
+
+#[divan::bench(args = [Day9Implementation::Mine])]
+fn day9_part2_bench(bencher: Bencher, implementation: Day9Implementation) {
+    let input = include_str!("../inputs/6_input.txt");
+
+    let implementation: &mut dyn FnMut() -> String = match implementation {
+        Day9Implementation::Mine => &mut || Day9::new().part2(input),
+    };
+
+    bencher.bench_local(move || {
+        assert_eq!(
+            black_box(implementation()),
+            Day9::new().known_solution_part2().unwrap()
+        );
     });
 }
