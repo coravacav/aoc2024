@@ -166,8 +166,6 @@ impl Solution for Day12 {
                     all
                 });
 
-            dbg!(value, &edges);
-
             perimeter_sum += edges.len() * output_stack.len();
         }
 
