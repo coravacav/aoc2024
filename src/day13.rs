@@ -1,7 +1,6 @@
 use crate::Solution;
 
 use nalgebra::{Matrix2, Vector2};
-use regex::Regex;
 
 pub struct Day13 {}
 
@@ -25,29 +24,30 @@ impl Solution for Day13 {
         let mut sum = 0;
         for section in input.split("\n\n") {
             let mut lines = section.lines();
-            let button_a = lines.next().unwrap().split_once(": ").unwrap().1;
-            let button_b = lines.next().unwrap().split_once(": ").unwrap().1;
-            let prize = lines.next().unwrap().split_once(": ").unwrap().1;
 
-            let (a_x, a_y) = button_a.split_once(", ").unwrap();
-            let a_x = a_x.split_once("+").unwrap().1.parse::<f64>().unwrap();
-            let a_y = a_y.split_once("+").unwrap().1.parse::<f64>().unwrap();
+            let mut split_next = |sep: &str| -> (f64, f64) {
+                lines
+                    .next()
+                    .unwrap()
+                    .split_once(": ")
+                    .unwrap()
+                    .1
+                    .split_once(", ")
+                    .map(|(a, b)| {
+                        (
+                            a.split_once(sep).unwrap().1.parse::<f64>().unwrap(),
+                            b.split_once(sep).unwrap().1.parse::<f64>().unwrap(),
+                        )
+                    })
+                    .unwrap()
+            };
 
-            let (b_x, b_y) = button_b.split_once(", ").unwrap();
-            let b_x = b_x.split_once("+").unwrap().1.parse::<f64>().unwrap();
-            let b_y = b_y.split_once("+").unwrap().1.parse::<f64>().unwrap();
+            let (a_x, a_y) = split_next("+");
+            let (b_x, b_y) = split_next("+");
+            let (prize_x, prize_y) = split_next("=");
 
-            let (prize_x, prize_y) = prize.split_once(", ").unwrap();
-            let prize_x = prize_x.split_once("=").unwrap().1.parse::<f64>().unwrap();
-            let prize_y = prize_y.split_once("=").unwrap().1.parse::<f64>().unwrap();
-
-            // Define a 2x2 matrix A
             let a = Matrix2::new(a_x, b_x, a_y, b_y);
-
-            // Define a 2x1 vector b
             let prize = Vector2::new(prize_x, prize_y);
-
-            // Solve for x in Ax = b
             let x = a.try_inverse().map(|inv_a| inv_a * prize).unwrap();
 
             if x.iter()
@@ -73,31 +73,33 @@ impl Solution for Day13 {
         let mut sum = 0;
         for section in input.split("\n\n") {
             let mut lines = section.lines();
-            let button_a = lines.next().unwrap().split_once(": ").unwrap().1;
-            let button_b = lines.next().unwrap().split_once(": ").unwrap().1;
-            let prize = lines.next().unwrap().split_once(": ").unwrap().1;
 
-            let (a_x, a_y) = button_a.split_once(", ").unwrap();
-            let a_x = a_x.split_once("+").unwrap().1.parse::<f64>().unwrap();
-            let a_y = a_y.split_once("+").unwrap().1.parse::<f64>().unwrap();
+            let mut split_next = |sep: &str| -> (f64, f64) {
+                lines
+                    .next()
+                    .unwrap()
+                    .split_once(": ")
+                    .unwrap()
+                    .1
+                    .split_once(", ")
+                    .map(|(a, b)| {
+                        (
+                            a.split_once(sep).unwrap().1.parse::<f64>().unwrap(),
+                            b.split_once(sep).unwrap().1.parse::<f64>().unwrap(),
+                        )
+                    })
+                    .unwrap()
+            };
 
-            let (b_x, b_y) = button_b.split_once(", ").unwrap();
-            let b_x = b_x.split_once("+").unwrap().1.parse::<f64>().unwrap();
-            let b_y = b_y.split_once("+").unwrap().1.parse::<f64>().unwrap();
+            let (a_x, a_y) = split_next("+");
+            let (b_x, b_y) = split_next("+");
+            let (mut prize_x, mut prize_y) = split_next("=");
 
-            let (prize_x, prize_y) = prize.split_once(", ").unwrap();
-            let prize_x =
-                prize_x.split_once("=").unwrap().1.parse::<f64>().unwrap() + 10000000000000.0;
-            let prize_y =
-                prize_y.split_once("=").unwrap().1.parse::<f64>().unwrap() + 10000000000000.0;
+            prize_x += 10000000000000.0;
+            prize_y += 10000000000000.0;
 
-            // Define a 2x2 matrix A
             let a = Matrix2::new(a_x, b_x, a_y, b_y);
-
-            // Define a 2x1 vector b
             let prize = Vector2::new(prize_x, prize_y);
-
-            // Solve for x in Ax = b
             let x = a.try_inverse().map(|inv_a| inv_a * prize).unwrap();
 
             if x.iter()
