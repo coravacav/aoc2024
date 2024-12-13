@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct Coord {
     row: i16,
     col: i16,
@@ -30,6 +30,26 @@ impl Coord {
 
     pub fn in_bounds(&self, width: i16, height: i16) -> bool {
         self.row >= 0 && self.row < height && self.col >= 0 && self.col < width
+    }
+
+    pub fn row(&self) -> i16 {
+        self.row
+    }
+
+    pub fn col(&self) -> i16 {
+        self.col
+    }
+
+    #[allow(clippy::nonminimal_bool)]
+    pub fn is_adjacent(&self, other: Self) -> bool {
+        (self.row - 1 == other.row && self.col == other.col)
+            || (self.row + 1 == other.row && self.col == other.col)
+            || (self.col - 1 == other.col && self.row == other.row)
+            || (self.col + 1 == other.col && self.row == other.row)
+    }
+
+    pub fn manhattan_distance(&self, other: Self) -> i16 {
+        (self.row - other.row).abs() + (self.col - other.col).abs()
     }
 }
 
@@ -176,6 +196,23 @@ impl<T: std::fmt::Display> Grid<T> {
                 line.iter()
                     .enumerate()
                     .map(|(j, t)| if Coord::new_usize(i, j) == coord {
+                        use colored::*;
+                        format!("{}", t).on_bright_red().black().to_string()
+                    } else {
+                        t.to_string()
+                    })
+                    .join("")
+            );
+        }
+    }
+
+    pub fn pretty_print_bolded_coords(&self, coords: &[Coord]) {
+        for (i, line) in self.iter_lines().enumerate() {
+            println!(
+                "{}",
+                line.iter()
+                    .enumerate()
+                    .map(|(j, t)| if coords.contains(&Coord::new_usize(i, j)) {
                         use colored::*;
                         format!("{}", t).on_bright_red().black().to_string()
                     } else {

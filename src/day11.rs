@@ -91,14 +91,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_part1() {
+    fn test_shared_sol() {
         let mut solution = Day11::new();
         assert_eq!(solution.part1(r#"125 17"#), String::from("55312"));
-    }
-
-    #[test]
-    fn test_part2() {
-        let mut solution = Day11::new();
-        assert_eq!(solution.part2(r#""#), String::from(""));
     }
 }

@@ -1,6 +1,6 @@
 use crate::grid::Coord;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum QuadDirection {
     Up,
     Down,
@@ -60,6 +60,10 @@ impl QuadDirection {
             Self::Right => &[Self::Down, Self::Left, Self::Up],
             Self::None => &[Self::Right, Self::Down, Self::Left, Self::Up],
         }
+    }
+
+    pub fn get_all_directions() -> &'static [Self] {
+        &[Self::Up, Self::Down, Self::Left, Self::Right]
     }
 }
 
