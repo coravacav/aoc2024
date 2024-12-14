@@ -155,6 +155,26 @@ impl<T> Grid<T> {
         }
     }
 
+    pub fn new_blank(width: i16, height: i16, value: T) -> Self
+    where
+        T: Clone,
+    {
+        Self {
+            width,
+            height,
+            data: vec![value; width as usize * height as usize],
+        }
+    }
+
+    pub fn set_all_coords_to(&mut self, coords: impl Iterator<Item = Coord>, value: T)
+    where
+        T: Clone,
+    {
+        for coord in coords {
+            self[coord] = value.clone();
+        }
+    }
+
     pub fn iter_with_coords(&self) -> impl DoubleEndedIterator<Item = (Coord, &T)> {
         self.data.iter().enumerate().map(|(i, t)| {
             let i = i16::try_from(i).unwrap();
@@ -181,7 +201,6 @@ impl<T> Grid<T> {
 }
 
 impl<T: std::fmt::Display> Grid<T> {
-    #[allow(dead_code)]
     pub fn pretty_print(&self) {
         for line in self.iter_lines() {
             println!("{}", line.iter().map(|t| t.to_string()).join(""));
