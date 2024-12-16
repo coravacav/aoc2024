@@ -1,9 +1,17 @@
 use itertools::Itertools;
 
+use crate::direction::QuadDirection;
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct Coord {
     row: i16,
     col: i16,
+}
+
+impl std::fmt::Display for Coord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.row, self.col)
+    }
 }
 
 impl std::fmt::Debug for Coord {
@@ -60,6 +68,17 @@ impl std::ops::Add<Coord> for Coord {
         Self {
             row: self.row + other.row,
             col: self.col + other.col,
+        }
+    }
+}
+
+impl std::ops::Add<i16> for Coord {
+    type Output = Self;
+
+    fn add(self, rhs: i16) -> Self::Output {
+        Self {
+            row: self.row + rhs,
+            col: self.col + rhs,
         }
     }
 }
@@ -130,7 +149,7 @@ impl<T> Grid<T> {
         };
 
         // Check if the width = height length makes sense
-        let usize_height = height as usize;
+        let usize_height = height;
         let guess_size = usize_height * usize_height + usize_height - 1;
 
         let width = if input.len() != guess_size {
@@ -145,12 +164,15 @@ impl<T> Grid<T> {
 
             width
         } else {
+            // assert that it's square
+            assert_eq!(input.len(), height * (height + 1) - 1);
+
             height
         };
 
         Self {
-            width,
-            height,
+            width: width as i16,
+            height: height as i16,
             data: grid,
         }
     }
@@ -187,6 +209,31 @@ impl<T> Grid<T> {
         self.data.chunks(self.width as usize)
     }
 
+    pub fn iter_direction_till(
+        &self,
+        coord: Coord,
+        dir: QuadDirection,
+        stop_check: impl Fn(Coord) -> bool,
+    ) -> impl Iterator<Item = Coord> {
+        let mut coord = coord;
+        let mut stop = false;
+
+        std::iter::from_fn(move || {
+            if stop {
+                return None;
+            }
+
+            coord += dir;
+
+            if !self.is_coord_in_bounds(coord) || stop_check(coord) {
+                stop = true;
+                return Some(coord);
+            }
+
+            Some(coord)
+        })
+    }
+
     pub fn is_coord_in_bounds(&self, coord: Coord) -> bool {
         coord.in_bounds(self.width, self.height)
     }
@@ -205,6 +252,12 @@ impl<T: std::fmt::Display> Grid<T> {
         for line in self.iter_lines() {
             println!("{}", line.iter().map(|t| t.to_string()).join(""));
         }
+    }
+
+    pub fn pretty_print_into_rows(&self) -> Vec<String> {
+        self.iter_lines()
+            .map(|line| line.iter().map(|t| t.to_string()).join(""))
+            .collect()
     }
 
     #[allow(dead_code)]

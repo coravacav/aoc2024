@@ -10,6 +10,7 @@ bitvec = "1.0.1"
 bnum = "0.12.0"
 clap = { version = "4.5.21", features = ["derive"] }
 colored = "2.1.0"
+crossterm = "0.28.1"
 dashmap = "6.1.0"
 derive_more = { version = "1.0.0", features = ["full"] }
 divan = "0.1.16"

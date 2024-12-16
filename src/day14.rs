@@ -183,10 +183,4 @@ p=9,5 v=-3,-3"#
             String::from("12")
         );
     }
-
-    #[test]
-    fn test_part2() {
-        let mut solution = Day14::new();
-        assert_eq!(solution.part2(r#""#), String::from(""));
-    }
 }

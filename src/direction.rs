@@ -21,6 +21,18 @@ impl std::fmt::Display for QuadDirection {
     }
 }
 
+impl From<char> for QuadDirection {
+    fn from(c: char) -> Self {
+        match c {
+            '^' => Self::Up,
+            'v' => Self::Down,
+            '<' => Self::Left,
+            '>' => Self::Right,
+            _ => panic!("Invalid char {c}"),
+        }
+    }
+}
+
 impl QuadDirection {
     pub fn rotate_right(self) -> QuadDirection {
         match self {
@@ -80,5 +92,25 @@ impl std::ops::Add<QuadDirection> for Coord {
 
     fn add(self, other: QuadDirection) -> Self::Output {
         self + other.to_coord_offset()
+    }
+}
+
+impl std::ops::AddAssign<QuadDirection> for Coord {
+    fn add_assign(&mut self, other: QuadDirection) {
+        *self += other.to_coord_offset();
+    }
+}
+
+impl std::ops::Sub<QuadDirection> for Coord {
+    type Output = Coord;
+
+    fn sub(self, other: QuadDirection) -> Self::Output {
+        self - other.to_coord_offset()
+    }
+}
+
+impl std::ops::SubAssign<QuadDirection> for Coord {
+    fn sub_assign(&mut self, other: QuadDirection) {
+        *self -= other.to_coord_offset();
     }
 }

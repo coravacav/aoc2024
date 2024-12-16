@@ -79,6 +79,16 @@ pub fn get_input(day: u8) -> String {
     std::fs::read_to_string(format!("inputs/{}_input.txt", day)).unwrap()
 }
 
+pub fn panic_after(count: usize) {
+    static mut COUNT: usize = 0;
+    unsafe {
+        COUNT += 1;
+        if COUNT >= count {
+            panic!("Panic after {} iterations", count);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
